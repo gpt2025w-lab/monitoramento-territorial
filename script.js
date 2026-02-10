@@ -1,12 +1,29 @@
 // ===============================
+// CONTROLE DE SEÇÕES
+// ===============================
+function mostrarSecao(id) {
+  document.querySelectorAll('.secao').forEach(secao => {
+    secao.classList.remove('ativa');
+  });
+
+  document.getElementById(id).classList.add('ativa');
+
+  if (id === 'mapa' && window.map) {
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+  }
+}
+
+// ===============================
 // INICIALIZAÇÃO DO MAPA
 // ===============================
 
-// Coordenadas iniciais (Represa Guarapiranga – ajuste depois se quiser)
+// Coordenadas iniciais (Represa Guarapiranga)
 const map = L.map('map').setView([-23.660, -46.768], 12);
 
 // ===============================
-// CAMADA BASE (MAPA PADRÃO)
+// CAMADA BASE
 // ===============================
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap'
@@ -14,7 +31,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 // ===============================
 // CAMADA EDITÁVEL
-// (áreas verdes, desmatadas, polígonos etc.)
 // ===============================
 const camadaEdicao = new L.FeatureGroup();
 map.addLayer(camadaEdicao);
@@ -40,7 +56,7 @@ const drawControl = new L.Control.Draw({
 map.addControl(drawControl);
 
 // ===============================
-// EVENTO: QUANDO DESENHAR NO MAPA
+// EVENTO DE DESENHO
 // ===============================
 map.on(L.Draw.Event.CREATED, function (event) {
   const layer = event.layer;
@@ -48,8 +64,9 @@ map.on(L.Draw.Event.CREATED, function (event) {
 });
 
 // ===============================
-// AJUSTE AUTOMÁTICO AO REDIMENSIONAR
+// AJUSTE AUTOMÁTICO DE TELA
 // ===============================
 window.addEventListener('resize', () => {
   map.invalidateSize();
 });
+
