@@ -4,50 +4,103 @@
   <meta charset="UTF-8">
   <title>Monitoramento Territorial</title>
 
-  <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
 
-  <!-- Leaflet Draw CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
-  />
-
-  <!-- Seu CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-<header>
-  <h1>Monitoramento Territorial</h1>
+<header class="topo">
+  <div class="logo">
+    <h1>Monitoramento Territorial</h1>
+    <span>Apoio Técnico à Gestão Municipal</span>
+  </div>
+
+  <nav>
+    <button onclick="mostrarSecao('inicio')">Início</button>
+    <button onclick="mostrarSecao('terrenos')">Terrenos</button>
+    <button onclick="mostrarSecao('mapa')">Mapa</button>
+    <button onclick="mostrarSecao('alvaras')">Alvarás</button>
+    <button onclick="mostrarSecao('ocorrencias')">Ocorrências</button>
+    <button onclick="mostrarSecao('dashboard')">Dashboard</button>
+    <button onclick="mostrarSecao('linhaTempo')">Linha do Tempo</button>
+    <button onclick="mostrarSecao('relatorios')">Relatórios</button>
+    <button onclick="mostrarSecao('documentos')">Documentos</button>
+  </nav>
 </header>
 
-<section class="painel-busca">
+<main>
 
-  <select id="pais">
-    <option value="">Selecione o país</option>
-    <option value="Brasil">Brasil</option>
-  </select>
+  <!-- INÍCIO -->
+  <section id="inicio" class="secao ativa">
+    <h2>Bem-vindo</h2>
+    <p>
+      Sistema de apoio técnico ao planejamento territorial e prevenção de riscos.
+    </p>
 
-  <select id="estado">
-    <option value="">Estado</option>
-  </select>
+    <div class="cards">
+      <div class="card" onclick="mostrarSecao('terrenos')">Cadastro de Terrenos</div>
+      <div class="card" onclick="mostrarSecao('mapa')">Visualização Geográfica</div>
+      <div class="card" onclick="mostrarSecao('alvaras')">Consulta de Alvarás</div>
+      <div class="card" onclick="mostrarSecao('ocorrencias')">Ocorrências</div>
+      <div class="card" onclick="mostrarSecao('dashboard')">Consolidação de Dados</div>
+      <div class="card" onclick="mostrarSecao('relatorios')">Relatórios Técnicos</div>
+    </div>
+  </section>
 
-  <select id="cidade">
-    <option value="">Cidade</option>
-  </select>
+  <!-- TERRENOS -->
+  <section id="terrenos" class="secao">
+    <h2>Cadastro de Ponto de Atenção</h2>
+    <p>Registro técnico para monitoramento territorial preventivo.</p>
+    <em>(formulário será construído aqui)</em>
+  </section>
 
-  <select id="bairro">
-    <option value="">Bairro</option>
-  </select>
+  <!-- MAPA -->
+  <section id="mapa" class="secao">
+    <h2>Visualização Geográfica</h2>
+    <div id="map"></div>
+  </section>
 
-</section>
+  <!-- ALVARÁS -->
+  <section id="alvaras" class="secao">
+    <h2>Cadastro de Alvará</h2>
+    <em>(formulário será construído aqui)</em>
+  </section>
 
-<div id="map"></div>
+  <!-- OCORRÊNCIAS -->
+  <section id="ocorrencias" class="secao">
+    <h2>Nova Ocorrência</h2>
+    <em>(formulário será construído aqui)</em>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="secao">
+    <h2>Painel de Tendências e Consolidação</h2>
+    <em>(gráficos e indicadores)</em>
+  </section>
+
+  <!-- LINHA DO TEMPO -->
+  <section id="linhaTempo" class="secao">
+    <h2>Linha do Tempo</h2>
+    <em>(evolução temporal)</em>
+  </section>
+
+  <!-- RELATÓRIOS -->
+  <section id="relatorios" class="secao">
+    <h2>Relatórios Técnicos</h2>
+    <em>(geração automática)</em>
+  </section>
+
+  <!-- DOCUMENTOS -->
+  <section id="documentos" class="secao">
+    <h2>Documentos Públicos</h2>
+    <em>(legislação e mapas)</em>
+  </section>
+
+</main>
 
 <!-- Scripts -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
