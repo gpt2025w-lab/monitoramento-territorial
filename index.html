@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Monitoramento Territorial</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <!-- Leaflet Draw CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
+  />
+
+  <!-- Seu CSS -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <h1>Monitoramento Territorial</h1>
+</header>
+
+<section class="painel-busca">
+
+  <select id="pais">
+    <option value="">Selecione o país</option>
+    <option value="Brasil">Brasil</option>
+  </select>
+
+  <select id="estado">
+    <option value="">Estado</option>
+  </select>
+
+  <select id="cidade">
+    <option value="">Cidade</option>
+  </select>
+
+  <select id="bairro">
+    <option value="">Bairro</option>
+  </select>
+
+</section>
+
+<div id="map"></div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
