@@ -12,7 +12,6 @@
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 
@@ -23,18 +22,6 @@
     <input type="text" id="loginUsuario" placeholder="Usuário">
     <input type="password" id="loginSenha" placeholder="Senha">
     <button onclick="login()">Entrar</button>
-    <button onclick="mostrarCadastroUsuario()">Solicitar Acesso</button>
-</div>
-
-<div id="cadastroUsuarioTela" class="login-container hidden">
-    <h2>Novo Usuário</h2>
-    <input type="text" id="novoUsuario" placeholder="Usuário">
-    <input type="password" id="novaSenha" placeholder="Senha">
-    <select id="novoPerfil">
-        <option value="TECNICO">Técnico</option>
-    </select>
-    <button onclick="cadastrarUsuario()">Cadastrar</button>
-    <button onclick="voltarLogin()">Cancelar</button>
 </div>
 
 <div id="sistema" class="hidden">
@@ -47,7 +34,6 @@
 <nav>
     <button onclick="mostrarSecao('dashboard')">Dashboard</button>
     <button onclick="mostrarSecao('ponto')">Ponto de Atenção</button>
-    <button onclick="mostrarSecao('usuarios')" id="btnUsuarios" class="hidden">Usuários</button>
 </nav>
 
 <section id="dashboard" class="secao ativa">
@@ -58,7 +44,6 @@
         <div class="card">Monitoramento Ativo <h3 id="monitoramento">0</h3></div>
         <div class="card">Arquivados <h3 id="arquivados">0</h3></div>
     </div>
-    <canvas id="grafico"></canvas>
 </section>
 
 <section id="ponto" class="secao">
@@ -80,19 +65,10 @@
 
         <textarea id="descricao" placeholder="Descrição Técnica"></textarea>
 
-        <label>Anexos (máx 30MB por arquivo)</label>
-        <input type="file" id="anexos" multiple>
-
         <div id="map"></div>
 
-        <button type="button" onclick="gerarPDFPonto()">Gerar PDF</button>
         <button type="submit">Salvar Ponto</button>
     </form>
-</section>
-
-<section id="usuarios" class="secao">
-    <h2>Gerenciamento de Usuários</h2>
-    <div id="listaUsuarios"></div>
 </section>
 
 </div>
@@ -100,5 +76,6 @@
 <script src="script.js"></script>
 </body>
 </html>
+
 
 
