@@ -1,114 +1,98 @@
-const { jsPDF } = window.jspdf;
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema Oficial - Monitoramento Territorial</title>
 
-let terrenos = JSON.parse(localStorage.getItem("terrenos")) || [];
+<link rel="stylesheet" href="style.css">
 
-/* ======================
-   INICIALIZAÇÃO
-====================== */
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
 
-document.addEventListener("DOMContentLoaded", () => {
-    gerarProtocolo();
-    definirDataAtual();
-    atualizarDashboard();
-});
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-/* ======================
-   MENU
-====================== */
+</head>
+<body>
 
-function mostrarSecao(id) {
-    document.querySelectorAll(".secao").forEach(sec => {
-        sec.classList.remove("ativa");
-    });
-    document.getElementById(id).classList.add("ativa");
-}
+<header>
+<h1>Prefeitura Municipal</h1>
+<p>Sistema Oficial de Monitoramento Territorial</p>
+</header>
 
-/* ======================
-   PROTOCOLO AUTOMÁTICO
-====================== */
+<nav>
+<button onclick="mostrarSecao('dashboard')">Dashboard</button>
+<button onclick="mostrarSecao('cadastro')">Cadastro</button>
+<button onclick="mostrarSecao('mapa')">Mapa</button>
+</nav>
 
-function gerarProtocolo() {
-    let numero = terrenos.length + 1;
-    let protocolo = "PMIS-" + new Date().getFullYear() + "-" + String(numero).padStart(4,"0");
-    document.getElementById("protocolo").value = protocolo;
-}
+<section id="dashboard" class="secao ativa">
+<h2>Painel Estratégico</h2>
 
-function definirDataAtual() {
-    let hoje = new Date().toISOString().split("T")[0];
-    document.getElementById("dataCadastro").value = hoje;
-}
+<div class="cards">
+<div class="card">Total Terrenos <h3 id="dashTotal">0</h3></div>
+<div class="card">Regulares <h3 id="dashRegular">0</h3></div>
+<div class="card">Irregulares <h3 id="dashIrregular">0</h3></div>
+</div>
 
-/* ======================
-   SALVAR CADASTRO
-====================== */
+<canvas id="graficoMensal"></canvas>
+</section>
 
-document.getElementById("formTerreno").addEventListener("submit", function(e){
-    e.preventDefault();
+<section id="cadastro" class="secao">
 
-    const terreno = {
-        protocolo: protocolo.value,
-        data: dataCadastro.value,
-        responsavel: responsavel.value,
-        cpfCnpj: cpfCnpj.value,
-        endereco: endereco.value,
-        tipo: tipo.value,
-        fiscal: fiscal.value,
-        zoneamento: zoneamento.value,
-        risco: risco.value,
-        situacao: situacao.value,
-        observacao: observacao.value
-    };
+<h2>Cadastro de Terreno</h2>
 
-    terrenos.push(terreno);
-    localStorage.setItem("terrenos", JSON.stringify(terrenos));
+<form id="formTerreno">
 
-    alert("Cadastro salvo com sucesso!");
+<input type="text" id="protocolo" readonly>
+<input type="date" id="dataCadastro" readonly>
 
-    this.reset();
-    gerarProtocolo();
-    definirDataAtual();
-    atualizarDashboard();
-});
+<input type="text" id="responsavel" placeholder="Nome do Responsável" required>
+<input type="text" id="cpfCnpj" placeholder="CPF/CNPJ" required>
+<input type="text" id="endereco" placeholder="Endereço" required>
 
-/* ======================
-   DASHBOARD
-====================== */
+<select id="tipo">
+<option>Residencial</option>
+<option>Comercial</option>
+<option>Industrial</option>
+<option>Área Verde</option>
+</select>
 
-function atualizarDashboard(){
-    document.getElementById("dashTerrenos").innerText = terrenos.length;
-}
+<select id="zoneamento">
+<option>Urbana</option>
+<option>Expansão Urbana</option>
+<option>Rural</option>
+<option>Ambiental</option>
+</select>
 
-/* ======================
-   GERAR PDF OFICIAL
-====================== */
+<select id="situacao">
+<option>Regular</option>
+<option>Irregular</option>
+<option>Em análise</option>
+</select>
 
-function gerarPDF() {
+<input type="text" id="fiscal" placeholder="Fiscal Responsável">
 
-    const doc = new jsPDF();
+<textarea id="observacao" placeholder="Observação"></textarea>
 
-    doc.setFontSize(16);
-    doc.text("PREFEITURA MUNICIPAL", 20, 20);
-    doc.text("Sistema Oficial de Cadastro de Terreno", 20, 30);
+<button type="submit">Salvar Cadastro</button>
+<button type="button" onclick="gerarPDF()">Gerar PDF</button>
+<button type="button" onclick="exportarKML()">Exportar KML</button>
+<button type="button" onclick="exportarDXF()">Exportar DXF</button>
 
-    doc.setFontSize(12);
+</form>
 
-    let y = 50;
+</section>
 
-    doc.text("Protocolo: " + protocolo.value, 20, y); y+=10;
-    doc.text("Data: " + dataCadastro.value, 20, y); y+=10;
-    doc.text("Responsável: " + responsavel.value, 20, y); y+=10;
-    doc.text("CPF/CNPJ: " + cpfCnpj.value, 20, y); y+=10;
-    doc.text("Endereço: " + endereco.value, 20, y); y+=10;
-    doc.text("Tipo: " + tipo.value, 20, y); y+=10;
-    doc.text("Fiscal: " + fiscal.value, 20, y); y+=10;
-    doc.text("Zoneamento: " + zoneamento.value, 20, y); y+=10;
-    doc.text("Risco Ambiental: " + risco.value, 20, y); y+=10;
-    doc.text("Situação: " + situacao.value, 20, y); y+=10;
-    doc.text("Observação: " + observacao.value, 20, y);
+<section id="mapa" class="secao">
+<h2>Mapa Oficial</h2>
+<div id="map"></div>
+</section>
 
-    doc.save("Relatorio_" + protocolo.value + ".pdf");
-}
-
-
-
+<script src="script.js"></script>
+</body>
+</html>
 
