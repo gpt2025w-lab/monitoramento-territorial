@@ -75,7 +75,8 @@ function iniciarSistema(){
     document.getElementById("sistema").classList.remove("hidden");
 
     if(usuarioAtual.perfil==="ADM"){
-        document.getElementById("btnUsuarios").classList.remove("hidden");
+        const btn = document.getElementById("btnUsuarios");
+        if(btn) btn.classList.remove("hidden");
     }
 
     gerarCodigo();
@@ -130,70 +131,68 @@ async function buscarEnderecoOSM(query){
     return await resposta.json();
 }
 
-document.addEventListener("DOMContentLoaded",()=>{
-    const campoEndereco = document.getElementById("endereco");
-
-    campoEndereco.addEventListener("input", async function(){
-
-        if(this.value.length < 4) return;
-
-        const resultados = await buscarEnderecoOSM(this.value);
-
-        if(resultados.length > 0){
-            const lat = resultados[0].lat;
-            const lon = resultados[0].lon;
-            if(mapa){
-                mapa.setView([lat, lon], 16);
-            }
-        }
-    });
-});
-
 /* ================================
-   PONTO
+   DOM READY (CORREÇÃO PRINCIPAL)
 ================================ */
 
-function gerarCodigo(){
-    document.getElementById("codigoRef").value =
-        "PT-"+new Date().getFullYear()+"-"+Math.floor(Math.random()*10000);
-}
+document.addEventListener("DOMContentLoaded",()=>{
 
-function definirData(){
-    document.getElementById("dataIdentificacao").value =
-        new Date().toISOString().split("T")[0];
-}
+    /* ENDEREÇO */
+    const campoEndereco = document.getElementById("endereco");
+    if(campoEndereco){
+        campoEndereco.addEventListener("input", async function(){
 
-document.getElementById("formPonto").addEventListener("submit",function(e){
-    e.preventDefault();
+            if(this.value.length < 4) return;
 
-    if(!geometriaAtual){
-        alert("Desenhe o ponto no mapa.");
-        return;
+            const resultados = await buscarEnderecoOSM(this.value);
+
+            if(resultados.length > 0 && mapa){
+                const lat = resultados[0].lat;
+                const lon = resultados[0].lon;
+                mapa.setView([lat, lon], 16);
+            }
+        });
     }
 
-    const ponto={
-        codigo:document.getElementById("codigoRef").value,
-        data:document.getElementById("dataIdentificacao").value,
-        endereco:document.getElementById("endereco").value,
-        bairro:document.getElementById("bairro").value,
-        status:document.getElementById("status").value,
-        descricao:document.getElementById("descricao").value,
-        geo:geometriaAtual,
-        usuario:usuarioAtual.usuario
-    };
+    /* FORM PONTO */
+    const form = document.getElementById("formPonto");
 
-    const tx=db.transaction("pontos","readwrite");
-    tx.objectStore("pontos").add(ponto);
+    if(form){
+        form.addEventListener("submit",function(e){
 
-    gerarPDFComDados(ponto);
+            e.preventDefault();
 
-    alert("Ponto salvo com sucesso.");
+            if(!geometriaAtual){
+                alert("Desenhe o ponto no mapa.");
+                return;
+            }
 
-    atualizarDashboard();
-    this.reset();
-    geometriaAtual=null;
-    gerarCodigo();
-    definirData();
+            const ponto={
+                codigo:document.getElementById("codigoRef").value,
+                data:document.getElementById("dataIdentificacao").value,
+                endereco:document.getElementById("endereco").value,
+                bairro:document.getElementById("bairro").value,
+                status:document.getElementById("status").value,
+                descricao:document.getElementById("descricao").value,
+                geo:geometriaAtual,
+                usuario:usuarioAtual.usuario
+            };
+
+            const tx=db.transaction("pontos","readwrite");
+            tx.objectStore("pontos").add(ponto);
+
+            gerarPDFComDados(ponto);
+
+            alert("Ponto salvo com sucesso.");
+
+            atualizarDashboard();
+            form.reset();
+            geometriaAtual=null;
+            gerarCodigo();
+            definirData();
+        });
+    }
+
 });
 
 /* ================================
@@ -234,7 +233,7 @@ function atualizarDashboard(){
 }
 
 /* ================================
-   PDF PROFISSIONAL
+   PDF
 ================================ */
 
 function gerarPDFComDados(ponto){
@@ -257,6 +256,11 @@ function gerarPDFComDados(ponto){
 
     doc.save("Relatorio_"+ponto.codigo+".pdf");
 }
+
+/* ================================
+   TROCA DE SEÇÃO
+================================ */
+
 function mostrarSecao(id){
 
     document.querySelectorAll(".secao").forEach(sec=>{
