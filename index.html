@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sistema Oficial - Monitoramento Territorial</title>
+<title>Monitoramento Territorial Preventivo</title>
 
 <link rel="stylesheet" href="style.css">
 
@@ -14,85 +14,91 @@
 <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 </head>
+
 <body>
 
+<div id="loginTela" class="login-container">
+    <h2>Acesso Técnico</h2>
+    <input type="text" id="loginUsuario" placeholder="Usuário">
+    <input type="password" id="loginSenha" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+    <button onclick="mostrarCadastroUsuario()">Solicitar Acesso</button>
+</div>
+
+<div id="cadastroUsuarioTela" class="login-container hidden">
+    <h2>Novo Usuário</h2>
+    <input type="text" id="novoUsuario" placeholder="Usuário">
+    <input type="password" id="novaSenha" placeholder="Senha">
+    <select id="novoPerfil">
+        <option value="TECNICO">Técnico</option>
+    </select>
+    <button onclick="cadastrarUsuario()">Cadastrar</button>
+    <button onclick="voltarLogin()">Cancelar</button>
+</div>
+
+<div id="sistema" class="hidden">
+
 <header>
-<h1>Prefeitura Municipal</h1>
-<p>Sistema Oficial de Monitoramento Territorial</p>
+    <h1>Monitoramento Territorial Preventivo</h1>
+    <button onclick="logout()">Sair</button>
 </header>
 
 <nav>
-<button onclick="mostrarSecao('dashboard')">Dashboard</button>
-<button onclick="mostrarSecao('cadastro')">Cadastro</button>
-<button onclick="mostrarSecao('mapa')">Mapa</button>
+    <button onclick="mostrarSecao('dashboard')">Dashboard</button>
+    <button onclick="mostrarSecao('ponto')">Ponto de Atenção</button>
+    <button onclick="mostrarSecao('usuarios')" id="btnUsuarios" class="hidden">Usuários</button>
 </nav>
 
 <section id="dashboard" class="secao ativa">
-<h2>Painel Estratégico</h2>
+    <h2>Painel Estratégico</h2>
+    <div class="cards">
+        <div class="card">Terrenos Cadastrados <h3 id="totalPontos">0</h3></div>
+        <div class="card">Em Análise <h3 id="emAnalise">0</h3></div>
+        <div class="card">Monitoramento Ativo <h3 id="monitoramento">0</h3></div>
+        <div class="card">Arquivados <h3 id="arquivados">0</h3></div>
+    </div>
+    <canvas id="grafico"></canvas>
+</section>
 
-<div class="cards">
-<div class="card">Total Terrenos <h3 id="dashTotal">0</h3></div>
-<div class="card">Regulares <h3 id="dashRegular">0</h3></div>
-<div class="card">Irregulares <h3 id="dashIrregular">0</h3></div>
+<section id="ponto" class="secao">
+    <h2>Cadastro de Ponto de Atenção</h2>
+    <form id="formPonto">
+
+        <input type="text" id="codigoRef" readonly>
+        <input type="date" id="dataIdentificacao" readonly>
+
+        <input type="text" id="endereco" placeholder="Endereço Completo" required>
+        <input type="text" id="bairro" placeholder="Bairro / Região" required>
+
+        <select id="status">
+            <option>Em Análise</option>
+            <option>Monitoramento Ativo</option>
+            <option>Monitoramento Preventivo</option>
+            <option>Arquivado</option>
+        </select>
+
+        <textarea id="descricao" placeholder="Descrição Técnica"></textarea>
+
+        <label>Anexos (máx 30MB por arquivo)</label>
+        <input type="file" id="anexos" multiple>
+
+        <div id="map"></div>
+
+        <button type="button" onclick="gerarPDFPonto()">Gerar PDF</button>
+        <button type="submit">Salvar Ponto</button>
+    </form>
+</section>
+
+<section id="usuarios" class="secao">
+    <h2>Gerenciamento de Usuários</h2>
+    <div id="listaUsuarios"></div>
+</section>
+
 </div>
-
-<canvas id="graficoMensal"></canvas>
-</section>
-
-<section id="cadastro" class="secao">
-
-<h2>Cadastro de Terreno</h2>
-
-<form id="formTerreno">
-
-<input type="text" id="protocolo" readonly>
-<input type="date" id="dataCadastro" readonly>
-
-<input type="text" id="responsavel" placeholder="Nome do Responsável" required>
-<input type="text" id="cpfCnpj" placeholder="CPF/CNPJ" required>
-<input type="text" id="endereco" placeholder="Endereço" required>
-
-<select id="tipo">
-<option>Residencial</option>
-<option>Comercial</option>
-<option>Industrial</option>
-<option>Área Verde</option>
-</select>
-
-<select id="zoneamento">
-<option>Urbana</option>
-<option>Expansão Urbana</option>
-<option>Rural</option>
-<option>Ambiental</option>
-</select>
-
-<select id="situacao">
-<option>Regular</option>
-<option>Irregular</option>
-<option>Em análise</option>
-</select>
-
-<input type="text" id="fiscal" placeholder="Fiscal Responsável">
-
-<textarea id="observacao" placeholder="Observação"></textarea>
-
-<button type="submit">Salvar Cadastro</button>
-<button type="button" onclick="gerarPDF()">Gerar PDF</button>
-<button type="button" onclick="exportarKML()">Exportar KML</button>
-<button type="button" onclick="exportarDXF()">Exportar DXF</button>
-
-</form>
-
-</section>
-
-<section id="mapa" class="secao">
-<h2>Mapa Oficial</h2>
-<div id="map"></div>
-</section>
 
 <script src="script.js"></script>
 </body>
 </html>
+
 
