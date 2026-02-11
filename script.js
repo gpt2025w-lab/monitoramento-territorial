@@ -1,260 +1,183 @@
-const dbName = "monitoramentoDB";
-let db;
-let usuarioAtual = null;
-let mapa, geometriaAtual;
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Cadastro de Terrenos</title>
 
-/* ================================
-   BANCO INDEXEDDB
-================================ */
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
 
-const request = indexedDB.open(dbName,1);
+<style>
+#map { height: 400px; margin-top:10px; }
+.lista-terrenos { margin-top:20px; }
+button { margin-top:5px; }
+</style>
+</head>
+<body>
 
-request.onupgradeneeded = e=>{
-    db = e.target.result;
+<h2>Cadastro de Terreno</h2>
 
-    if(!db.objectStoreNames.contains("users")){
-        db.createObjectStore("users",{keyPath:"usuario"});
+<input type="text" id="endereco" placeholder="Digite país, cidade, rua ou bairro" />
+<button onclick="buscarEndereco()">Buscar</button>
+
+<div id="map"></div>
+
+<h3>Relatório</h3>
+<div id="relatorio"></div>
+
+<h3>Terrenos Salvos</h3>
+<div id="lista" class="lista-terrenos"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
+
+<script>
+
+// MAPA
+var map = L.map('map').setView([-23.5505, -46.6333], 13);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+}).addTo(map);
+
+var drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+
+// CONTROLE DE DESENHO
+var drawControl = new L.Control.Draw({
+    edit: {
+        featureGroup: drawnItems
+    },
+    draw: {
+        polygon: true,
+        marker: true,
+        rectangle: true,
+        circle: false,
+        polyline: false
     }
+});
+map.addControl(drawControl);
 
-    if(!db.objectStoreNames.contains("pontos")){
-        db.createObjectStore("pontos",{keyPath:"id",autoIncrement:true});
+// QUANDO DESENHAR
+map.on(L.Draw.Event.CREATED, function (event) {
+    var layer = event.layer;
+    drawnItems.addLayer(layer);
+
+    salvarTerreno(layer);
+});
+
+// BUSCA AUTOMÁTICA AO APERTAR ENTER
+document.getElementById("endereco").addEventListener("keypress", function(e) {
+    if (e.key === "Enter") {
+        buscarEndereco();
     }
-};
+});
 
-request.onsuccess = e=>{
-    db = e.target.result;
-    criarAdminPadrao();
-};
+// FUNÇÃO DE BUSCA
+function buscarEndereco() {
 
-/* ================================
-   ADMIN PADRÃO
-================================ */
+    var endereco = document.getElementById("endereco").value;
 
-function criarAdminPadrao(){
-    const tx = db.transaction("users","readwrite");
-    const store = tx.objectStore("users");
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${endereco}`)
+    .then(res => res.json())
+    .then(data => {
 
-    store.get("admin").onsuccess = e=>{
-        if(!e.target.result){
-            store.add({
-                usuario:"admin",
-                senha:"123456",
-                perfil:"ADM",
-                status:"APROVADO"
-            });
-            console.log("Admin criado: admin / 123456");
+        if (data.length > 0) {
+            var lat = data[0].lat;
+            var lon = data[0].lon;
+
+            map.flyTo([lat, lon], 17);
+
+            L.marker([lat, lon]).addTo(map);
+        } else {
+            alert("Local não encontrado");
         }
-    };
+    });
 }
 
-/* ================================
-   LOGIN
-================================ */
+// SALVAR TERRENO
+function salvarTerreno(layer) {
 
-function login(){
-    const user = document.getElementById("loginUsuario").value;
-    const pass = document.getElementById("loginSenha").value;
+    var terrenos = JSON.parse(localStorage.getItem("terrenos")) || [];
 
-    const tx = db.transaction("users","readonly");
-    const store = tx.objectStore("users");
+    var geo = layer.toGeoJSON();
 
-    store.get(user).onsuccess = e=>{
-        const u = e.target.result;
+    terrenos.push(geo);
 
-        if(u && u.senha===pass && u.status==="APROVADO"){
-            usuarioAtual = u;
-            iniciarSistema();
-        }else{
-            alert("Acesso negado ou usuário não aprovado.");
-        }
-    };
+    localStorage.setItem("terrenos", JSON.stringify(terrenos));
+
+    atualizarLista();
+    atualizarRelatorio();
 }
 
-function iniciarSistema(){
-    document.getElementById("loginTela").classList.add("hidden");
-    document.getElementById("sistema").classList.remove("hidden");
+// ATUALIZAR LISTA VISUAL
+function atualizarLista() {
 
-    if(usuarioAtual.perfil==="ADM"){
-        document.getElementById("btnUsuarios").classList.remove("hidden");
-    }
+    var listaDiv = document.getElementById("lista");
+    listaDiv.innerHTML = "";
 
-    gerarCodigo();
-    definirData();
-    iniciarMapa();
-    atualizarDashboard();
+    var terrenos = JSON.parse(localStorage.getItem("terrenos")) || [];
+
+    terrenos.forEach((t, index) => {
+
+        var div = document.createElement("div");
+
+        div.innerHTML = `
+        Terreno ${index+1}
+        <button onclick="excluirTerreno(${index})">Excluir</button>
+        `;
+
+        listaDiv.appendChild(div);
+    });
 }
 
-function logout(){
+// EXCLUIR
+function excluirTerreno(index) {
+
+    var terrenos = JSON.parse(localStorage.getItem("terrenos")) || [];
+
+    terrenos.splice(index, 1);
+
+    localStorage.setItem("terrenos", JSON.stringify(terrenos));
+
+    atualizarLista();
+    atualizarRelatorio();
+
     location.reload();
 }
 
-/* ================================
-   MAPA + DRAW
-================================ */
+// RELATÓRIO
+function atualizarRelatorio() {
 
-function iniciarMapa(){
+    var relatorio = document.getElementById("relatorio");
+    relatorio.innerHTML = "";
 
-    if(mapa){
-        mapa.remove();
-    }
+    var terrenos = JSON.parse(localStorage.getItem("terrenos")) || [];
 
-    mapa = L.map("map").setView([-23.6,-46.7],12);
+    terrenos.forEach((t, i) => {
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
-        .addTo(mapa);
-
-    const drawn = new L.FeatureGroup();
-    mapa.addLayer(drawn);
-
-    const drawControl = new L.Control.Draw({
-        edit:{featureGroup:drawn},
-        draw:{polygon:true,rectangle:true,marker:true}
-    });
-
-    mapa.addControl(drawControl);
-
-    mapa.on(L.Draw.Event.CREATED,e=>{
-        drawn.clearLayers();
-        drawn.addLayer(e.layer);
-        geometriaAtual = e.layer.toGeoJSON();
+        relatorio.innerHTML += `
+        <p><b>Terreno ${i+1}</b><br>
+        Tipo: ${t.geometry.type}<br>
+        Coordenadas: ${JSON.stringify(t.geometry.coordinates)}</p>
+        `;
     });
 }
 
-/* ================================
-   AUTOCOMPLETE ENDEREÇO
-================================ */
+// CARREGAR AO INICIAR
+window.onload = function() {
 
-async function buscarEnderecoOSM(query){
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}`;
-    const resposta = await fetch(url);
-    return await resposta.json();
-}
+    atualizarLista();
+    atualizarRelatorio();
 
-document.addEventListener("DOMContentLoaded",()=>{
-    const campoEndereco = document.getElementById("endereco");
+    var terrenos = JSON.parse(localStorage.getItem("terrenos")) || [];
 
-    campoEndereco.addEventListener("input", async function(){
-
-        if(this.value.length < 4) return;
-
-        const resultados = await buscarEnderecoOSM(this.value);
-
-        if(resultados.length > 0){
-            const lat = resultados[0].lat;
-            const lon = resultados[0].lon;
-            if(mapa){
-                mapa.setView([lat, lon], 16);
-            }
-        }
+    terrenos.forEach(t => {
+        L.geoJSON(t).addTo(drawnItems);
     });
-});
+};
 
-/* ================================
-   PONTO
-================================ */
-
-function gerarCodigo(){
-    document.getElementById("codigoRef").value =
-        "PT-"+new Date().getFullYear()+"-"+Math.floor(Math.random()*10000);
-}
-
-function definirData(){
-    document.getElementById("dataIdentificacao").value =
-        new Date().toISOString().split("T")[0];
-}
-
-document.getElementById("formPonto").addEventListener("submit",function(e){
-    e.preventDefault();
-
-    if(!geometriaAtual){
-        alert("Desenhe o ponto no mapa.");
-        return;
-    }
-
-    const ponto={
-        codigo:document.getElementById("codigoRef").value,
-        data:document.getElementById("dataIdentificacao").value,
-        endereco:document.getElementById("endereco").value,
-        bairro:document.getElementById("bairro").value,
-        status:document.getElementById("status").value,
-        descricao:document.getElementById("descricao").value,
-        geo:geometriaAtual,
-        usuario:usuarioAtual.usuario
-    };
-
-    const tx=db.transaction("pontos","readwrite");
-    tx.objectStore("pontos").add(ponto);
-
-    gerarPDFComDados(ponto);
-
-    alert("Ponto salvo com sucesso.");
-
-    atualizarDashboard();
-    this.reset();
-    geometriaAtual=null;
-    gerarCodigo();
-    definirData();
-});
-
-/* ================================
-   EXCLUIR PONTO
-================================ */
-
-function excluirPonto(id){
-    if(!confirm("Deseja realmente excluir este ponto?")) return;
-
-    const tx=db.transaction("pontos","readwrite");
-    tx.objectStore("pontos").delete(id);
-
-    tx.oncomplete=()=>{
-        alert("Ponto excluído.");
-        atualizarDashboard();
-    };
-}
-
-/* ================================
-   DASHBOARD
-================================ */
-
-function atualizarDashboard(){
-    const tx=db.transaction("pontos","readonly");
-    const store=tx.objectStore("pontos");
-
-    store.getAll().onsuccess=e=>{
-        const dados=e.target.result;
-
-        document.getElementById("totalPontos").innerText=dados.length;
-        document.getElementById("emAnalise").innerText=
-            dados.filter(p=>p.status==="Em Análise").length;
-        document.getElementById("monitoramento").innerText=
-            dados.filter(p=>p.status==="Monitoramento Ativo").length;
-        document.getElementById("arquivados").innerText=
-            dados.filter(p=>p.status==="Arquivado").length;
-    };
-}
-
-/* ================================
-   PDF PROFISSIONAL
-================================ */
-
-function gerarPDFComDados(ponto){
-
-    const {jsPDF}=window.jspdf;
-    const doc=new jsPDF();
-
-    doc.setFontSize(12);
-    doc.text("Relatório Técnico de Apoio ao Planejamento – Uso Interno",10,10);
-
-    doc.setFontSize(10);
-    doc.text("Código: "+ponto.codigo,10,25);
-    doc.text("Data: "+ponto.data,10,35);
-    doc.text("Endereço: "+ponto.endereco,10,45);
-    doc.text("Bairro: "+ponto.bairro,10,55);
-    doc.text("Status: "+ponto.status,10,65);
-
-    doc.text("Descrição Técnica:",10,80);
-    doc.text(ponto.descricao || "Não informada.",10,90);
-
-    doc.save("Relatorio_"+ponto.codigo+".pdf");
-}
+</script>
+</body>
+</html>
 
