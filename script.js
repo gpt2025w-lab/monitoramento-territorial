@@ -52,8 +52,8 @@ function criarAdminPadrao(){
 ================================ */
 
 function login(){
-    const user = loginUsuario.value;
-    const pass = loginSenha.value;
+    const user = document.getElementById("loginUsuario").value;
+    const pass = document.getElementById("loginSenha").value;
 
     const tx = db.transaction("users","readonly");
     const store = tx.objectStore("users");
@@ -71,11 +71,11 @@ function login(){
 }
 
 function iniciarSistema(){
-    loginTela.classList.add("hidden");
-    sistema.classList.remove("hidden");
+    document.getElementById("loginTela").classList.add("hidden");
+    document.getElementById("sistema").classList.remove("hidden");
 
     if(usuarioAtual.perfil==="ADM"){
-        btnUsuarios.classList.remove("hidden");
+        document.getElementById("btnUsuarios").classList.remove("hidden");
     }
 
     gerarCodigo();
@@ -93,7 +93,7 @@ function logout(){
 }
 
 /* ================================
-   TROCA DE ABAS
+   TROCA DE ABAS (CORRIGIDA)
 ================================ */
 
 function mostrarSecao(id){
@@ -101,7 +101,10 @@ function mostrarSecao(id){
         sec.classList.remove("ativa");
     });
 
-    document.getElementById(id).classList.add("ativa");
+    const secao = document.getElementById(id);
+    if(secao){
+        secao.classList.add("ativa");
+    }
 
     if(id === "ponto" && mapa){
         setTimeout(()=> mapa.invalidateSize(),200);
@@ -121,19 +124,19 @@ function mostrarSecao(id){
 ================================ */
 
 function mostrarCadastroUsuario(){
-    loginTela.classList.add("hidden");
-    cadastroUsuarioTela.classList.remove("hidden");
+    document.getElementById("loginTela").classList.add("hidden");
+    document.getElementById("cadastroUsuarioTela").classList.remove("hidden");
 }
 
 function voltarLogin(){
-    cadastroUsuarioTela.classList.add("hidden");
-    loginTela.classList.remove("hidden");
+    document.getElementById("cadastroUsuarioTela").classList.add("hidden");
+    document.getElementById("loginTela").classList.remove("hidden");
 }
 
 function cadastrarUsuario(){
     const novo = {
-        usuario:novoUsuario.value,
-        senha:novaSenha.value,
+        usuario:document.getElementById("novoUsuario").value,
+        senha:document.getElementById("novaSenha").value,
         perfil:"TECNICO",
         status:"PENDENTE"
     };
@@ -186,6 +189,11 @@ function aprovarUsuario(usuario){
 ================================ */
 
 function iniciarMapa(){
+
+    if(mapa){
+        mapa.remove();
+    }
+
     mapa = L.map("map").setView([-23.6,-46.7],12);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
@@ -213,11 +221,13 @@ function iniciarMapa(){
 ================================ */
 
 function gerarCodigo(){
-    codigoRef.value="PT-"+new Date().getFullYear()+"-"+Math.floor(Math.random()*10000);
+    document.getElementById("codigoRef").value =
+        "PT-"+new Date().getFullYear()+"-"+Math.floor(Math.random()*10000);
 }
 
 function definirData(){
-    dataIdentificacao.value=new Date().toISOString().split("T")[0];
+    document.getElementById("dataIdentificacao").value =
+        new Date().toISOString().split("T")[0];
 }
 
 document.getElementById("formPonto").addEventListener("submit",function(e){
@@ -228,7 +238,7 @@ document.getElementById("formPonto").addEventListener("submit",function(e){
         return;
     }
 
-    const arquivos = anexos.files;
+    const arquivos = document.getElementById("anexos").files;
     const anexosArray=[];
 
     for(let f of arquivos){
@@ -240,12 +250,12 @@ document.getElementById("formPonto").addEventListener("submit",function(e){
     }
 
     const ponto={
-        codigo:codigoRef.value,
-        data:dataIdentificacao.value,
-        endereco:endereco.value,
-        bairro:bairro.value,
-        status:status.value,
-        descricao:descricao.value,
+        codigo:document.getElementById("codigoRef").value,
+        data:document.getElementById("dataIdentificacao").value,
+        endereco:document.getElementById("endereco").value,
+        bairro:document.getElementById("bairro").value,
+        status:document.getElementById("status").value,
+        descricao:document.getElementById("descricao").value,
         geo:geometriaAtual,
         anexos:anexosArray,
         usuario:usuarioAtual.usuario
@@ -257,6 +267,7 @@ document.getElementById("formPonto").addEventListener("submit",function(e){
     alert("Ponto salvo com sucesso.");
     atualizarDashboard();
     this.reset();
+    geometriaAtual = null;
 });
 
 /* ================================
@@ -270,10 +281,13 @@ function atualizarDashboard(){
     store.getAll().onsuccess=e=>{
         const dados=e.target.result;
 
-        totalPontos.innerText=dados.length;
-        emAnalise.innerText=dados.filter(p=>p.status==="Em Análise").length;
-        monitoramento.innerText=dados.filter(p=>p.status==="Monitoramento Ativo").length;
-        arquivados.innerText=dados.filter(p=>p.status==="Arquivado").length;
+        document.getElementById("totalPontos").innerText=dados.length;
+        document.getElementById("emAnalise").innerText=
+            dados.filter(p=>p.status==="Em Análise").length;
+        document.getElementById("monitoramento").innerText=
+            dados.filter(p=>p.status==="Monitoramento Ativo").length;
+        document.getElementById("arquivados").innerText=
+            dados.filter(p=>p.status==="Arquivado").length;
     };
 }
 
@@ -286,12 +300,12 @@ function gerarPDFPonto(){
     const doc=new jsPDF();
 
     doc.text("Relatório Técnico de Apoio ao Planejamento – Uso Interno",10,10);
-    doc.text("Código: "+codigoRef.value,10,20);
-    doc.text("Data: "+dataIdentificacao.value,10,30);
-    doc.text("Endereço: "+endereco.value,10,40);
-    doc.text("Descrição: "+descricao.value,10,50);
+    doc.text("Código: "+document.getElementById("codigoRef").value,10,20);
+    doc.text("Data: "+document.getElementById("dataIdentificacao").value,10,30);
+    doc.text("Endereço: "+document.getElementById("endereco").value,10,40);
+    doc.text("Descrição:",10,50);
+    doc.text(document.getElementById("descricao").value,10,60);
 
-    doc.save("Relatorio_"+codigoRef.value+".pdf");
+    doc.save("Relatorio_"+document.getElementById("codigoRef").value+".pdf");
 }
-
 
