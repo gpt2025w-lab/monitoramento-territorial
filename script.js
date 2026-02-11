@@ -257,4 +257,21 @@ function gerarPDFComDados(ponto){
 
     doc.save("Relatorio_"+ponto.codigo+".pdf");
 }
+function mostrarSecao(id){
+
+    document.querySelectorAll(".secao").forEach(sec=>{
+        sec.classList.remove("ativa");
+    });
+
+    const secao = document.getElementById(id);
+    if(secao){
+        secao.classList.add("ativa");
+    }
+
+    if(id==="ponto" && mapa){
+        setTimeout(()=>{
+            mapa.invalidateSize();
+        },200);
+    }
+}
 
