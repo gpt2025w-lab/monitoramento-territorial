@@ -84,16 +84,12 @@ function iniciarSistema(){
     atualizarDashboard();
 }
 
-/* ================================
-   LOGOUT
-================================ */
-
 function logout(){
     location.reload();
 }
 
 /* ================================
-   TROCA DE ABAS (CORRIGIDA)
+   TROCA DE ABAS
 ================================ */
 
 function mostrarSecao(id){
@@ -238,6 +234,13 @@ document.getElementById("formPonto").addEventListener("submit",function(e){
         return;
     }
 
+    const codigo = document.getElementById("codigoRef").value;
+    const data = document.getElementById("dataIdentificacao").value;
+    const endereco = document.getElementById("endereco").value;
+    const bairro = document.getElementById("bairro").value;
+    const status = document.getElementById("status").value;
+    const descricao = document.getElementById("descricao").value;
+
     const arquivos = document.getElementById("anexos").files;
     const anexosArray=[];
 
@@ -250,12 +253,12 @@ document.getElementById("formPonto").addEventListener("submit",function(e){
     }
 
     const ponto={
-        codigo:document.getElementById("codigoRef").value,
-        data:document.getElementById("dataIdentificacao").value,
-        endereco:document.getElementById("endereco").value,
-        bairro:document.getElementById("bairro").value,
-        status:document.getElementById("status").value,
-        descricao:document.getElementById("descricao").value,
+        codigo,
+        data,
+        endereco,
+        bairro,
+        status,
+        descricao,
         geo:geometriaAtual,
         anexos:anexosArray,
         usuario:usuarioAtual.usuario
@@ -264,10 +267,15 @@ document.getElementById("formPonto").addEventListener("submit",function(e){
     const tx=db.transaction("pontos","readwrite");
     tx.objectStore("pontos").add(ponto);
 
+    gerarPDFComDados(ponto); // gera PDF automático
+
     alert("Ponto salvo com sucesso.");
+
     atualizarDashboard();
     this.reset();
     geometriaAtual = null;
+    gerarCodigo();
+    definirData();
 });
 
 /* ================================
@@ -292,20 +300,27 @@ function atualizarDashboard(){
 }
 
 /* ================================
-   PDF
+   PDF PROFISSIONAL
 ================================ */
 
-function gerarPDFPonto(){
+function gerarPDFComDados(ponto){
+
     const {jsPDF}=window.jspdf;
     const doc=new jsPDF();
 
+    doc.setFontSize(12);
     doc.text("Relatório Técnico de Apoio ao Planejamento – Uso Interno",10,10);
-    doc.text("Código: "+document.getElementById("codigoRef").value,10,20);
-    doc.text("Data: "+document.getElementById("dataIdentificacao").value,10,30);
-    doc.text("Endereço: "+document.getElementById("endereco").value,10,40);
-    doc.text("Descrição:",10,50);
-    doc.text(document.getElementById("descricao").value,10,60);
 
-    doc.save("Relatorio_"+document.getElementById("codigoRef").value+".pdf");
+    doc.setFontSize(10);
+    doc.text("Código: "+ponto.codigo,10,25);
+    doc.text("Data: "+ponto.data,10,35);
+    doc.text("Endereço: "+ponto.endereco,10,45);
+    doc.text("Bairro: "+ponto.bairro,10,55);
+    doc.text("Status: "+ponto.status,10,65);
+
+    doc.text("Descrição Técnica:",10,80);
+    doc.text(ponto.descricao || "Não informada.",10,90);
+
+    doc.save("Relatorio_"+ponto.codigo+".pdf");
 }
 
