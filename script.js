@@ -42,12 +42,16 @@ function mostrarSecao(id) {
 
 const map = L.map('map').setView([-23.660, -46.768], 12);
 
-const camadaPadrao = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap'
-}).addTo(map);
+// Camada padrão
+const camadaPadrao = L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { attribution: '© OpenStreetMap' }
+).addTo(map);
 
+// Camada satélite (ESRI real)
 const camadaSatelite = L.tileLayer(
-  'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png'
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  { attribution: 'Tiles © Esri' }
 );
 
 const baseMaps = {
@@ -57,37 +61,114 @@ const baseMaps = {
 
 L.control.layers(baseMaps).addTo(map);
 
+// Grupo editável
 const camadaEdicao = new L.FeatureGroup();
 map.addLayer(camadaEdicao);
 
+// Controle desenho
 const drawControl = new L.Control.Draw({
-  edit: { featureGroup: camadaEdicao },
+  edit: {
+    featureGroup: camadaEdicao,
+    remove: true
+  },
   draw: {
     polygon: true,
     rectangle: true,
     marker: true,
     circle: false,
-    polyline: false
+    polyline: false,
+    circlemarker: false
   }
 });
 
 map.addControl(drawControl);
 
+// ===============================
+// SALVAR DESENHOS NO DB
+// ===============================
+
 map.on(L.Draw.Event.CREATED, function (event) {
-  camadaEdicao.addLayer(event.layer);
+  const layer = event.layer;
+  camadaEdicao.addLayer(layer);
+
+  const geojson = layer.toGeoJSON();
+  DB.terrenos.push(geojson);
+  salvarDB();
 });
 
 // ===============================
-// DASHBOARD (BÁSICO POR ENQUANTO)
+// RESTAURAR DESENHOS SALVOS
 // ===============================
 
-function atualizarDashboard() {
-  const totalTerrenos = DB.terrenos.length;
-  const totalAlvaras = DB.alvaras.length;
-  const totalOcorrencias = DB.ocorrencias.length;
-
-  document.getElementById("dashTerrenos").innerText = totalTerrenos;
-  document.getElementById("dashAlvaras").innerText = totalAlvaras;
-  document.getElementById("dashOcorrencias").innerText = totalOcorrencias;
+function restaurarDesenhos() {
+  DB.terrenos.forEach(item => {
+    const layer = L.geoJSON(item);
+    layer.eachLayer(l => {
+      camadaEdicao.addLayer(l);
+    });
+  });
 }
 
+restaurarDesenhos();
+
+// ===============================
+// DASHBOARD + GRÁFICO
+// ===============================
+
+let grafico;
+
+function gerarGrafico() {
+
+  const ctx = document.getElementById('graficoOcorrencias');
+  if (!ctx) return;
+
+  if (grafico) {
+    grafico.destroy();
+  }
+
+  grafico = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Terrenos', 'Alvarás', 'Ocorrências'],
+      datasets: [{
+        label: 'Registros',
+        data: [
+          DB.terrenos.length,
+          DB.alvaras.length,
+          DB.ocorrencias.length
+        ],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: { beginAtZero: true }
+      }
+    }
+  });
+}
+
+function atualizarDashboard() {
+
+  const t = document.getElementById("dashTerrenos");
+  const a = document.getElementById("dashAlvaras");
+  const o = document.getElementById("dashOcorrencias");
+
+  if (t) t.innerText = DB.terrenos.length;
+  if (a) a.innerText = DB.alvaras.length;
+  if (o) o.innerText = DB.ocorrencias.length;
+
+  gerarGrafico();
+}
+
+// ===============================
+// AJUSTE AO REDIMENSIONAR
+// ===============================
+
+window.addEventListener('resize', () => {
+  map.invalidateSize();
+});
