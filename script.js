@@ -4,7 +4,7 @@ let usuarioAtual = null;
 let mapa, geometriaAtual;
 
 /* ================================
-   ABRIR BANCO
+   BANCO INDEXEDDB
 ================================ */
 
 const request = indexedDB.open(dbName,1);
@@ -89,99 +89,7 @@ function logout(){
 }
 
 /* ================================
-   TROCA DE ABAS
-================================ */
-
-function mostrarSecao(id){
-    document.querySelectorAll(".secao").forEach(sec=>{
-        sec.classList.remove("ativa");
-    });
-
-    const secao = document.getElementById(id);
-    if(secao){
-        secao.classList.add("ativa");
-    }
-
-    if(id === "ponto" && mapa){
-        setTimeout(()=> mapa.invalidateSize(),200);
-    }
-
-    if(id === "dashboard"){
-        atualizarDashboard();
-    }
-
-    if(id === "usuarios"){
-        listarUsuarios();
-    }
-}
-
-/* ================================
-   USUÁRIOS
-================================ */
-
-function mostrarCadastroUsuario(){
-    document.getElementById("loginTela").classList.add("hidden");
-    document.getElementById("cadastroUsuarioTela").classList.remove("hidden");
-}
-
-function voltarLogin(){
-    document.getElementById("cadastroUsuarioTela").classList.add("hidden");
-    document.getElementById("loginTela").classList.remove("hidden");
-}
-
-function cadastrarUsuario(){
-    const novo = {
-        usuario:document.getElementById("novoUsuario").value,
-        senha:document.getElementById("novaSenha").value,
-        perfil:"TECNICO",
-        status:"PENDENTE"
-    };
-
-    const tx=db.transaction("users","readwrite");
-    tx.objectStore("users").add(novo);
-
-    alert("Usuário aguardando aprovação do ADM.");
-    voltarLogin();
-}
-
-function listarUsuarios(){
-    const lista = document.getElementById("listaUsuarios");
-    lista.innerHTML = "";
-
-    const tx = db.transaction("users","readonly");
-    const store = tx.objectStore("users");
-
-    store.getAll().onsuccess = e=>{
-        e.target.result.forEach(u=>{
-            const div = document.createElement("div");
-            div.style.marginBottom = "10px";
-
-            div.innerHTML = `
-                <b>${u.usuario}</b> - ${u.perfil} - ${u.status}
-                ${u.status==="PENDENTE" && usuarioAtual.perfil==="ADM"
-                    ? `<button onclick="aprovarUsuario('${u.usuario}')">Aprovar</button>`
-                    : ""}
-            `;
-
-            lista.appendChild(div);
-        });
-    };
-}
-
-function aprovarUsuario(usuario){
-    const tx = db.transaction("users","readwrite");
-    const store = tx.objectStore("users");
-
-    store.get(usuario).onsuccess = e=>{
-        const u = e.target.result;
-        u.status = "APROVADO";
-        store.put(u);
-        listarUsuarios();
-    };
-}
-
-/* ================================
-   MAPA
+   MAPA + DRAW
 ================================ */
 
 function iniciarMapa(){
@@ -213,6 +121,35 @@ function iniciarMapa(){
 }
 
 /* ================================
+   AUTOCOMPLETE ENDEREÇO
+================================ */
+
+async function buscarEnderecoOSM(query){
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${query}`;
+    const resposta = await fetch(url);
+    return await resposta.json();
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+    const campoEndereco = document.getElementById("endereco");
+
+    campoEndereco.addEventListener("input", async function(){
+
+        if(this.value.length < 4) return;
+
+        const resultados = await buscarEnderecoOSM(this.value);
+
+        if(resultados.length > 0){
+            const lat = resultados[0].lat;
+            const lon = resultados[0].lon;
+            if(mapa){
+                mapa.setView([lat, lon], 16);
+            }
+        }
+    });
+});
+
+/* ================================
    PONTO
 ================================ */
 
@@ -234,49 +171,46 @@ document.getElementById("formPonto").addEventListener("submit",function(e){
         return;
     }
 
-    const codigo = document.getElementById("codigoRef").value;
-    const data = document.getElementById("dataIdentificacao").value;
-    const endereco = document.getElementById("endereco").value;
-    const bairro = document.getElementById("bairro").value;
-    const status = document.getElementById("status").value;
-    const descricao = document.getElementById("descricao").value;
-
-    const arquivos = document.getElementById("anexos").files;
-    const anexosArray=[];
-
-    for(let f of arquivos){
-        if(f.size > 30*1024*1024){
-            alert("Arquivo excede 30MB.");
-            return;
-        }
-        anexosArray.push(f);
-    }
-
     const ponto={
-        codigo,
-        data,
-        endereco,
-        bairro,
-        status,
-        descricao,
+        codigo:document.getElementById("codigoRef").value,
+        data:document.getElementById("dataIdentificacao").value,
+        endereco:document.getElementById("endereco").value,
+        bairro:document.getElementById("bairro").value,
+        status:document.getElementById("status").value,
+        descricao:document.getElementById("descricao").value,
         geo:geometriaAtual,
-        anexos:anexosArray,
         usuario:usuarioAtual.usuario
     };
 
     const tx=db.transaction("pontos","readwrite");
     tx.objectStore("pontos").add(ponto);
 
-    gerarPDFComDados(ponto); // gera PDF automático
+    gerarPDFComDados(ponto);
 
     alert("Ponto salvo com sucesso.");
 
     atualizarDashboard();
     this.reset();
-    geometriaAtual = null;
+    geometriaAtual=null;
     gerarCodigo();
     definirData();
 });
+
+/* ================================
+   EXCLUIR PONTO
+================================ */
+
+function excluirPonto(id){
+    if(!confirm("Deseja realmente excluir este ponto?")) return;
+
+    const tx=db.transaction("pontos","readwrite");
+    tx.objectStore("pontos").delete(id);
+
+    tx.oncomplete=()=>{
+        alert("Ponto excluído.");
+        atualizarDashboard();
+    };
+}
 
 /* ================================
    DASHBOARD
