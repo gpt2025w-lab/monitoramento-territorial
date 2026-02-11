@@ -1,178 +1,113 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<title>Sistema Obras - Eco Serra</title>
+const { jsPDF } = window.jspdf;
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw/dist/leaflet.draw.css"/>
+let terrenos = JSON.parse(localStorage.getItem("terrenos")) || [];
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+/* ======================
+   INICIALIZAÇÃO
+====================== */
 
-<style>
-body { font-family: Arial; margin:0; background:#f8fafc; }
-.menu { background:#1e293b; padding:10px; display:flex; gap:10px; }
-.menu button { background:#334155; color:white; border:none; padding:8px 12px; cursor:pointer; border-radius:4px; }
-.secao { display:none; padding:20px; }
-.ativa { display:block; }
-.card { background:#f1f5f9; padding:15px; margin:10px 0; border-radius:6px; }
-#map { height:500px; }
+document.addEventListener("DOMContentLoaded", () => {
+    gerarProtocolo();
+    definirDataAtual();
+    atualizarDashboard();
+});
 
-input, select, textarea {
-  padding:6px;
-  margin:5px 0;
-  width:100%;
-  border-radius:4px;
-  border:1px solid #ccc;
+/* ======================
+   MENU
+====================== */
+
+function mostrarSecao(id) {
+    document.querySelectorAll(".secao").forEach(sec => {
+        sec.classList.remove("ativa");
+    });
+    document.getElementById(id).classList.add("ativa");
 }
 
-button.salvar {
-  background:#16a34a;
-  color:white;
-  padding:8px;
-  border:none;
-  margin-top:10px;
-  border-radius:4px;
-  cursor:pointer;
+/* ======================
+   PROTOCOLO AUTOMÁTICO
+====================== */
+
+function gerarProtocolo() {
+    let numero = terrenos.length + 1;
+    let protocolo = "PMIS-" + new Date().getFullYear() + "-" + String(numero).padStart(4,"0");
+    document.getElementById("protocolo").value = protocolo;
 }
 
-.grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
-  gap:10px;
+function definirDataAtual() {
+    let hoje = new Date().toISOString().split("T")[0];
+    document.getElementById("dataCadastro").value = hoje;
 }
-</style>
-</head>
-<body>
 
-<div class="menu">
-  <button onclick="mostrarSecao('dashboard')">Dashboard</button>
-  <button onclick="mostrarSecao('cadastro')">Cadastro Terreno</button>
-  <button onclick="mostrarSecao('mapa')">Mapa</button>
-</div>
+/* ======================
+   SALVAR CADASTRO
+====================== */
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="secao ativa">
-  <h2>Dashboard Geral</h2>
-  <div class="card">Terrenos: <b id="dashTerrenos">0</b></div>
-  <canvas id="graficoMensal"></canvas>
-</div>
+document.getElementById("formTerreno").addEventListener("submit", function(e){
+    e.preventDefault();
 
-<!-- CADASTRO -->
-<div id="cadastro" class="secao">
-  <h2>Cadastro de Terreno</h2>
+    const terreno = {
+        protocolo: protocolo.value,
+        data: dataCadastro.value,
+        responsavel: responsavel.value,
+        cpfCnpj: cpfCnpj.value,
+        endereco: endereco.value,
+        tipo: tipo.value,
+        fiscal: fiscal.value,
+        zoneamento: zoneamento.value,
+        risco: risco.value,
+        situacao: situacao.value,
+        observacao: observacao.value
+    };
 
-  <form id="formTerreno">
+    terrenos.push(terreno);
+    localStorage.setItem("terrenos", JSON.stringify(terrenos));
 
-    <div class="grid">
+    alert("Cadastro salvo com sucesso!");
 
-      <div>
-        <label>Número do Protocolo</label>
-        <input type="text" id="protocolo" readonly>
-      </div>
+    this.reset();
+    gerarProtocolo();
+    definirDataAtual();
+    atualizarDashboard();
+});
 
-      <div>
-        <label>Data</label>
-        <input type="date" id="dataCadastro" readonly>
-      </div>
+/* ======================
+   DASHBOARD
+====================== */
 
-      <div>
-        <label>Nome do Responsável</label>
-        <input type="text" id="responsavel" required>
-      </div>
+function atualizarDashboard(){
+    document.getElementById("dashTerrenos").innerText = terrenos.length;
+}
 
-      <div>
-        <label>CPF/CNPJ</label>
-        <input type="text" id="cpfCnpj" required>
-      </div>
+/* ======================
+   GERAR PDF OFICIAL
+====================== */
 
-      <div>
-        <label>Endereço</label>
-        <input type="text" id="endereco" required>
-      </div>
+function gerarPDF() {
 
-      <div>
-        <label>Tipo</label>
-        <select id="tipo">
-          <option>Residencial</option>
-          <option>Comercial</option>
-          <option>Industrial</option>
-          <option>Área Verde</option>
-        </select>
-      </div>
+    const doc = new jsPDF();
 
-      <div>
-        <label>Área</label>
-        <select id="area">
-          <option>Urbana</option>
-          <option>Expansão Urbana</option>
-          <option>Rural</option>
-          <option>Ambiental</option>
-          <option>Mananciais</option>
-          <option>Preservação Permanente</option>
-        </select>
-      </div>
+    doc.setFontSize(16);
+    doc.text("PREFEITURA MUNICIPAL", 20, 20);
+    doc.text("Sistema Oficial de Cadastro de Terreno", 20, 30);
 
-      <div>
-        <label>Status</label>
-        <select id="status">
-          <option>Em Análise</option>
-          <option>Monitoramento Ativo</option>
-          <option>Monitoramento Preventivo</option>
-          <option>Arquivado</option>
-        </select>
-      </div>
+    doc.setFontSize(12);
 
-      <div>
-        <label>Fiscal Responsável</label>
-        <input type="text" id="fiscal" required>
-      </div>
+    let y = 50;
 
-      <div>
-        <label>Zoneamento</label>
-        <input type="text" id="zoneamento">
-      </div>
+    doc.text("Protocolo: " + protocolo.value, 20, y); y+=10;
+    doc.text("Data: " + dataCadastro.value, 20, y); y+=10;
+    doc.text("Responsável: " + responsavel.value, 20, y); y+=10;
+    doc.text("CPF/CNPJ: " + cpfCnpj.value, 20, y); y+=10;
+    doc.text("Endereço: " + endereco.value, 20, y); y+=10;
+    doc.text("Tipo: " + tipo.value, 20, y); y+=10;
+    doc.text("Fiscal: " + fiscal.value, 20, y); y+=10;
+    doc.text("Zoneamento: " + zoneamento.value, 20, y); y+=10;
+    doc.text("Risco Ambiental: " + risco.value, 20, y); y+=10;
+    doc.text("Situação: " + situacao.value, 20, y); y+=10;
+    doc.text("Observação: " + observacao.value, 20, y);
 
-      <div>
-        <label>Risco Ambiental</label>
-        <select id="risco">
-          <option>Baixo</option>
-          <option>Médio</option>
-          <option>Alto</option>
-          <option>Área de Preservação</option>
-        </select>
-      </div>
-
-      <div>
-        <label>Situação</label>
-        <select id="situacao">
-          <option>Regular</option>
-          <option>Irregular</option>
-          <option>Em análise</option>
-        </select>
-      </div>
-
-    </div>
-
-    <label>Observação</label>
-    <textarea id="observacao" rows="4"></textarea>
-
-    <button type="submit" class="salvar">Salvar Cadastro</button>
-
-  </form>
-</div>
-
-<!-- MAPA -->
-<div id="mapa" class="secao">
-  <h2>Mapa Interativo</h2>
-  <div id="map"></div>
-</div>
-
-<script src="script.js"></script>
-</body>
-</html>
+    doc.save("Relatorio_" + protocolo.value + ".pdf");
+}
 
 
 
