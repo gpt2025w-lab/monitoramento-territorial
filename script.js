@@ -1,5 +1,5 @@
 // ===============================
-// BANCO DE DADOS LOCAL
+// BANCO LOCAL
 // ===============================
 
 const DB = {
@@ -15,7 +15,7 @@ function salvarDB() {
 }
 
 // ===============================
-// CONTROLE DE SEÇÕES
+// TROCAR SEÇÃO
 // ===============================
 
 function mostrarSecao(id) {
@@ -26,9 +26,7 @@ function mostrarSecao(id) {
   document.getElementById(id).classList.add('ativa');
 
   if (id === 'mapa') {
-    setTimeout(() => {
-      map.invalidateSize();
-    }, 200);
+    setTimeout(() => map.invalidateSize(), 200);
   }
 
   if (id === 'dashboard') {
@@ -37,90 +35,66 @@ function mostrarSecao(id) {
 }
 
 // ===============================
-// MAPA
+// CADASTRO
 // ===============================
 
-const map = L.map('map').setView([-23.660, -46.768], 12);
+function salvarRegistro() {
 
-// Camada padrão
-const camadaPadrao = L.tileLayer(
-  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  { attribution: '© OpenStreetMap' }
-).addTo(map);
+  const tipo = document.getElementById("tipoRegistro").value;
+  const descricao = document.getElementById("descricao").value;
+  const data = document.getElementById("dataRegistro").value;
 
-// Camada satélite (ESRI real)
-const camadaSatelite = L.tileLayer(
-  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-  { attribution: 'Tiles © Esri' }
-);
-
-const baseMaps = {
-  "Padrão": camadaPadrao,
-  "Satélite": camadaSatelite
-};
-
-L.control.layers(baseMaps).addTo(map);
-
-// Grupo editável
-const camadaEdicao = new L.FeatureGroup();
-map.addLayer(camadaEdicao);
-
-// Controle desenho
-const drawControl = new L.Control.Draw({
-  edit: {
-    featureGroup: camadaEdicao,
-    remove: true
-  },
-  draw: {
-    polygon: true,
-    rectangle: true,
-    marker: true,
-    circle: false,
-    polyline: false,
-    circlemarker: false
+  if (!descricao || !data) {
+    alert("Preencha todos os campos");
+    return;
   }
-});
 
-map.addControl(drawControl);
+  const novo = {
+    descricao,
+    data,
+    criadoEm: new Date()
+  };
 
-// ===============================
-// SALVAR DESENHOS NO DB
-// ===============================
+  DB[tipo + "s"].push(novo);
 
-map.on(L.Draw.Event.CREATED, function (event) {
-  const layer = event.layer;
-  camadaEdicao.addLayer(layer);
-
-  const geojson = layer.toGeoJSON();
-  DB.terrenos.push(geojson);
   salvarDB();
-});
+  atualizarDashboard();
 
-// ===============================
-// RESTAURAR DESENHOS SALVOS
-// ===============================
-
-function restaurarDesenhos() {
-  DB.terrenos.forEach(item => {
-    const layer = L.geoJSON(item);
-    layer.eachLayer(l => {
-      camadaEdicao.addLayer(l);
-    });
-  });
+  alert("Salvo com sucesso!");
+  document.getElementById("descricao").value = "";
 }
 
-restaurarDesenhos();
-
 // ===============================
-// DASHBOARD + GRÁFICO
+// DASHBOARD
 // ===============================
 
 let grafico;
 
-function gerarGrafico() {
+function atualizarDashboard() {
 
-  const ctx = document.getElementById('graficoOcorrencias');
-  if (!ctx) return;
+  document.getElementById("dashTerrenos").innerText = DB.terrenos.length;
+  document.getElementById("dashAlvaras").innerText = DB.alvaras.length;
+  document.getElementById("dashOcorrencias").innerText = DB.ocorrencias.length;
+
+  atualizarGrafico();
+}
+
+function atualizarGrafico() {
+
+  const meses = Array(12).fill(0);
+
+  const todos = [
+    ...DB.terrenos,
+    ...DB.alvaras,
+    ...DB.ocorrencias
+  ];
+
+  todos.forEach(item => {
+    const mes = new Date(item.data).getMonth();
+    meses[mes]++;
+  });
+
+  const ctx = document.getElementById('graficoMensal');
 
   if (grafico) {
     grafico.destroy();
@@ -129,46 +103,48 @@ function gerarGrafico() {
   grafico = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: ['Terrenos', 'Alvarás', 'Ocorrências'],
+      labels: [
+        'Jan','Fev','Mar','Abr','Mai','Jun',
+        'Jul','Ago','Set','Out','Nov','Dez'
+      ],
       datasets: [{
-        label: 'Registros',
-        data: [
-          DB.terrenos.length,
-          DB.alvaras.length,
-          DB.ocorrencias.length
-        ],
-        borderWidth: 1
+        label: 'Registros por mês',
+        data: meses
       }]
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: { beginAtZero: true }
-      }
     }
   });
 }
 
-function atualizarDashboard() {
-
-  const t = document.getElementById("dashTerrenos");
-  const a = document.getElementById("dashAlvaras");
-  const o = document.getElementById("dashOcorrencias");
-
-  if (t) t.innerText = DB.terrenos.length;
-  if (a) a.innerText = DB.alvaras.length;
-  if (o) o.innerText = DB.ocorrencias.length;
-
-  gerarGrafico();
-}
-
 // ===============================
-// AJUSTE AO REDIMENSIONAR
+// MAPA
 // ===============================
 
-window.addEventListener('resize', () => {
-  map.invalidateSize();
+const map = L.map('map').setView([-23.660, -46.768], 12);
+
+const camadaPadrao = L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+).addTo(map);
+
+const camadaEdicao = new L.FeatureGroup();
+map.addLayer(camadaEdicao);
+
+const drawControl = new L.Control.Draw({
+  edit: { featureGroup: camadaEdicao },
+  draw: {
+    polygon: true,
+    rectangle: true,
+    marker: true,
+    circle: false,
+    polyline: false
+  }
 });
+
+map.addControl(drawControl);
+
+map.on(L.Draw.Event.CREATED, function (event) {
+  camadaEdicao.addLayer(event.layer);
+});
+
+// Inicializa dashboard ao abrir
+atualizarDashboard();
+
