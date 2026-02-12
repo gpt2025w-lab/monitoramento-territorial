@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Monitoramento Territorial Preventivo</title>
@@ -13,8 +14,8 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-draw/dist/leaflet.draw.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-</head>
 
+</head>
 <body>
 
 <div id="loginTela" class="login-container">
@@ -34,6 +35,7 @@
 <nav>
     <button onclick="mostrarSecao('dashboard')">Dashboard</button>
     <button onclick="mostrarSecao('ponto')">Ponto de Atenção</button>
+    <button onclick="mostrarSecao('usuarios')">Usuários</button>
 </nav>
 
 <section id="dashboard" class="secao ativa">
@@ -47,28 +49,32 @@
 </section>
 
 <section id="ponto" class="secao">
-    <h2>Cadastro de Ponto de Atenção</h2>
-    <form id="formPonto">
+    <h2>Cadastro de Ponto</h2>
 
+    <form id="formPonto">
         <input type="text" id="codigoRef" readonly>
         <input type="date" id="dataIdentificacao" readonly>
 
-        <input type="text" id="endereco" placeholder="Endereço Completo" required>
-        <input type="text" id="bairro" placeholder="Bairro / Região" required>
+        <input type="text" id="endereco" placeholder="Endereço" required>
+        <input type="text" id="bairro" placeholder="Bairro" required>
 
         <select id="status">
             <option>Em Análise</option>
             <option>Monitoramento Ativo</option>
-            <option>Monitoramento Preventivo</option>
             <option>Arquivado</option>
         </select>
 
-        <textarea id="descricao" placeholder="Descrição Técnica"></textarea>
+        <textarea id="descricao" placeholder="Descrição"></textarea>
 
         <div id="map"></div>
 
-        <button type="submit">Salvar Ponto</button>
+        <button type="submit">Salvar</button>
     </form>
+</section>
+
+<section id="usuarios" class="secao">
+    <h2>Usuários cadastrados</h2>
+    <div id="listaUsuarios"></div>
 </section>
 
 </div>
@@ -76,6 +82,7 @@
 <script src="script.js"></script>
 </body>
 </html>
+
 
 
 
