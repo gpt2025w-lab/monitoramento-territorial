@@ -1,20 +1,21 @@
 const dbName = "monitoramentoDB";
 let db;
 let usuarioAtual = null;
-let mapa, geometriaAtual;
+let mapa;
+let geometriaAtual = null;
+let camadaDesenho;
+
+/* ========================
+   BANCO
+======================== */
 
 const request = indexedDB.open(dbName,1);
 
 request.onupgradeneeded = e=>{
     db = e.target.result;
 
-    if(!db.objectStoreNames.contains("users")){
-        db.createObjectStore("users",{keyPath:"usuario"});
-    }
-
-    if(!db.objectStoreNames.contains("pontos")){
-        db.createObjectStore("pontos",{keyPath:"id",autoIncrement:true});
-    }
+    db.createObjectStore("users",{keyPath:"usuario"});
+    db.createObjectStore("pontos",{keyPath:"id",autoIncrement:true});
 };
 
 request.onsuccess = e=>{
@@ -38,121 +39,165 @@ function criarAdminPadrao(){
     };
 }
 
+/* ========================
+   LOGIN
+======================== */
+
 function login(){
-    const user = document.getElementById("loginUsuario").value;
-    const pass = document.getElementById("loginSenha").value;
+    const user = loginUsuario.value;
+    const pass = loginSenha.value;
 
     const tx = db.transaction("users","readonly");
     const store = tx.objectStore("users");
 
     store.get(user).onsuccess = e=>{
         const u = e.target.result;
-
-        if(u && u.senha===pass && u.status==="APROVADO"){
+        if(u && u.senha===pass){
             usuarioAtual = u;
             iniciarSistema();
         }else{
-            alert("Acesso negado.");
+            alert("Login inválido");
         }
     };
 }
 
 function iniciarSistema(){
-    document.getElementById("loginTela").classList.add("hidden");
-    document.getElementById("sistema").classList.remove("hidden");
+    loginTela.classList.add("hidden");
+    sistema.classList.remove("hidden");
 
     gerarCodigo();
     definirData();
     atualizarDashboard();
 }
 
-function logout(){
-    location.reload();
+function logout(){ location.reload(); }
+
+/* ========================
+   MAPA
+======================== */
+
+function iniciarMapa(){
+
+    if(mapa) return;
+
+    mapa = L.map("map").setView([-23.6,-46.7],12);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
+        .addTo(mapa);
+
+    camadaDesenho = new L.FeatureGroup();
+    mapa.addLayer(camadaDesenho);
+
+    const drawControl = new L.Control.Draw({
+        edit:{ featureGroup:camadaDesenho },
+        draw:{ polygon:true, rectangle:true, marker:true }
+    });
+
+    mapa.addControl(drawControl);
+
+    mapa.on(L.Draw.Event.CREATED,e=>{
+        camadaDesenho.clearLayers();
+        camadaDesenho.addLayer(e.layer);
+        geometriaAtual = e.layer.toGeoJSON();
+    });
 }
 
-function gerarCodigo(){
-    document.getElementById("codigoRef").value =
-        "PT-"+new Date().getFullYear()+"-"+Math.floor(Math.random()*10000);
-}
-
-function definirData(){
-    document.getElementById("dataIdentificacao").value =
-        new Date().toISOString().split("T")[0];
-}
+/* ========================
+   FORM
+======================== */
 
 document.addEventListener("DOMContentLoaded",()=>{
 
-    const form = document.getElementById("formPonto");
+    formPonto.addEventListener("submit",e=>{
+        e.preventDefault();
 
-    if(form){
-        form.addEventListener("submit",function(e){
+        if(!geometriaAtual){
+            alert("Desenhe no mapa");
+            return;
+        }
 
-            e.preventDefault();
+        const ponto={
+            codigo:codigoRef.value,
+            data:dataIdentificacao.value,
+            endereco:endereco.value,
+            bairro:bairro.value,
+            status:status.value,
+            descricao:descricao.value,
+            geo:geometriaAtual
+        };
 
-            const ponto={
-                codigo:document.getElementById("codigoRef").value,
-                data:document.getElementById("dataIdentificacao").value,
-                endereco:document.getElementById("endereco").value,
-                bairro:document.getElementById("bairro").value,
-                status:document.getElementById("status").value,
-                descricao:document.getElementById("descricao").value,
-                usuario:usuarioAtual.usuario
-            };
+        const tx=db.transaction("pontos","readwrite");
+        tx.objectStore("pontos").add(ponto);
 
-            const tx=db.transaction("pontos","readwrite");
-            tx.objectStore("pontos").add(ponto);
-
-            alert("Ponto salvo com sucesso.");
-
-            atualizarDashboard();
-            form.reset();
-            gerarCodigo();
-            definirData();
-        });
-    }
+        alert("Salvo");
+        atualizarDashboard();
+    });
 
 });
 
+/* ========================
+   DASHBOARD
+======================== */
+
 function atualizarDashboard(){
     const tx=db.transaction("pontos","readonly");
-    const store=tx.objectStore("pontos");
+    tx.objectStore("pontos").getAll().onsuccess=e=>{
+        const d=e.target.result;
 
-    store.getAll().onsuccess=e=>{
-        const dados=e.target.result;
-
-        document.getElementById("totalPontos").innerText=dados.length;
-        document.getElementById("emAnalise").innerText=
-            dados.filter(p=>p.status==="Em Análise").length;
-        document.getElementById("monitoramento").innerText=
-            dados.filter(p=>p.status==="Monitoramento Ativo").length;
-        document.getElementById("arquivados").innerText=
-            dados.filter(p=>p.status==="Arquivado").length;
+        totalPontos.innerText=d.length;
+        emAnalise.innerText=d.filter(p=>p.status==="Em Análise").length;
+        monitoramento.innerText=d.filter(p=>p.status==="Monitoramento Ativo").length;
+        arquivados.innerText=d.filter(p=>p.status==="Arquivado").length;
     };
 }
 
+/* ========================
+   USUÁRIOS
+======================== */
+
+function carregarUsuarios(){
+    const tx=db.transaction("users","readonly");
+    tx.objectStore("users").getAll().onsuccess=e=>{
+        listaUsuarios.innerHTML="";
+
+        e.target.result.forEach(u=>{
+            listaUsuarios.innerHTML += `
+            <div style="padding:8px;border-bottom:1px solid #ccc">
+                ${u.usuario} - ${u.perfil}
+            </div>`;
+        });
+    };
+}
+
+/* ========================
+   SEÇÕES
+======================== */
+
 function mostrarSecao(id){
 
-    document.querySelectorAll(".secao").forEach(sec=>{
-        sec.classList.remove("ativa");
-    });
+    document.querySelectorAll(".secao").forEach(s=>s.classList.remove("ativa"));
+    document.getElementById(id).classList.add("ativa");
 
-    const secao = document.getElementById(id);
-    if(secao){
-        secao.classList.add("ativa");
-    }
-
-    // MAPA
-    if(id === "ponto"){
+    if(id==="ponto"){
         setTimeout(()=>{
-            if(!mapa){
-                iniciarMapa();
-            }
+            iniciarMapa();
             mapa.invalidateSize();
-        },500);
+        },400);
     }
 
-    // USUÁRIOS
-    if(id === "usuarios"){
+    if(id==="usuarios"){
         carregarUsuarios();
     }
+}
+
+/* ========================
+   UTIL
+======================== */
+
+function gerarCodigo(){
+    codigoRef.value="PT-"+Date.now();
+}
+
+function definirData(){
+    dataIdentificacao.value=new Date().toISOString().split("T")[0];
 }
