@@ -131,6 +131,7 @@ function atualizarDashboard(){
 }
 
 function mostrarSecao(id){
+
     document.querySelectorAll(".secao").forEach(sec=>{
         sec.classList.remove("ativa");
     });
@@ -139,6 +140,19 @@ function mostrarSecao(id){
     if(secao){
         secao.classList.add("ativa");
     }
+
+    // MAPA
+    if(id === "ponto"){
+        setTimeout(()=>{
+            if(!mapa){
+                iniciarMapa();
+            }
+            mapa.invalidateSize();
+        },500);
+    }
+
+    // USUÁRIOS
+    if(id === "usuarios"){
+        carregarUsuarios();
+    }
 }
-
-
